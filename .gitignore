@@ -1,3 +1,16 @@
+# it would kill git
+sette-snippets-catg
+sette-snippets-evosuite
+sette-snippets-jpet
+sette-snippets-pex
+sette-snippets-spf
+
+#
+# Ant
+#
+build/
+dist/
+
 #
 # Java
 #
