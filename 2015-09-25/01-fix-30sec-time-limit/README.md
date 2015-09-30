@@ -1,4 +1,4 @@
-# SETTE Results 2015-09-25/01-experiments-30sec
+# SETTE Results 2015-09-25/01-fix-30sec-time-limit
 
 Experimental results for comparing 6 test input generator tools using the SETTE framework. Each tool was directed to generate tests for a code base (`sette-snippets`) containing 300 method representing the important language features of Java. The outcome of the generation and the resulting tests were saved, then the coverage achieved by the tests were measured in order to gain insights about the current capabilities of the tools. 
 
