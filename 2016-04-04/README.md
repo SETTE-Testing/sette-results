@@ -1,0 +1,21 @@
+# SETTE Results 2016-04-04
+
+The results of three sets of experiments can be found in this folder:
+* `01_snippets-core_30sec-time-limit`: executions with 30 seconds time limit (10 repetitions) on CATG, EvoSuite, IntelliTest, jPET, Randoop and SPF
+* `02_snippets-performance-time_variable-time-limit`: variable time limit (15s, 45s, 60s, 300s) experiments on a subset of the above snippets (10 repetitions)
+* `03_snippets-extra_30sec-time-limit`: 
+* `04_mutation-analysis`: mutation analysis of the tests generated the Java tools
+
+The `analysis` folder contains:
+* CSV files with the extracted and cleaned data from the experiments
+* R scripts performing the data analysis and creating plots
+
+## Contents of the compressed files
+
+Each folder contains a 7z file with all the input and output of the experiments; for the Java-based tools this includes
+ * `build`: compiled snippet and test files
+ * `runner-out`: logs and output of the SETTE framework running the test generator tool (stdout, coverage reports...)
+ * `snippet-src`: snippet codes used in the given experiment
+ * `test`: tests with the generated test inputs in JUnit format
+ * `build.xml`: building the snippets and the tests with Apache Ant
+(7-Zip can be obtained from http://www.7-zip.org/ for free.)
