@@ -18,6 +18,7 @@ library(dplyr)
 
 library(tidyr)
 
+
 # --------- Globals  -----------------------------------------------------------
 
 TOOLS = c("CATG", "EvoSuite", "IntelliTest", "jPET", "Randoop", "SPF")
@@ -25,15 +26,16 @@ TOP_CATEGORIES = c("Basic", "Structures", "Objects", "Generics", "Library", "Oth
 MAIN_CATEGORIES = c("B1", "B2", "B3", "B4", "B5", "B6", "S1", "S2", "S3", "S4", "O1", "O2", "O3", "O4", "G1", "G2", "L1", "L2", "L3", "L4", "LO", "Ot")
 STATUSES = c("N/A", "EX", "T/M", "NC", "C")
 
+
 # --------- Load manual CSV ----------------------------------------------------
 
 # NOTE: CSV should not be Unicode
-manual <- read.csv("data/snippetinputchecker-manual.csv", sep=",")
+manual <- read.csv("data/sette-snippets-core_snippetinputchecker-manual.csv", sep=",")
 
 
 # --------- Load experiment CSVs -----------------------------------------------
 
-r <- read.csv("data/sette-snippets_catg_evosuite_jpet_randoop_spf_run-1-10_30sec.csv", sep=",")
+r <- read.csv("data/sette-snippets-core_catg_evosuite_jpet_randoop_spf_run1-10_30sec.csv", sep=",")
 
 # change order of factor levels in Status
 r$Status <- factor(r$Status, levels = STATUSES)
@@ -43,9 +45,10 @@ str(r)
 # CHECK whether Size column is numeric and not factor
 # CHECK whether Status levels are in the correct order
 
+
 # --------- Load IntelliTest (Pex) -----------------------------------------------------------
 
-intellitest = read.csv(file = "data/sette-snippets_intellitest_run1-10_30sec.csv", sep=",")
+intellitest = read.csv(file = "data/sette-snippets-core_intellitest_run1-10_30sec.csv", sep=",")
 
 r <- rbind(r, intellitest)
 
@@ -56,6 +59,7 @@ for(i in 1:10) {
 	r <- rbind(r, data.frame(Category="G1", Snippet="G1_guessTypeWithExtendsAndUse", Tool="IntelliTest", Coverage=NA, Status="N/A", Size=NA, Run=run, Duration=NA))
 } 
 rm(i, run, intellitest)
+
 
 # --------- Format data --------------------------------------------------------
 
@@ -102,7 +106,6 @@ summary(r)
 #		for Duration CATG it is NA (the tool did not start), for jPET and SPF it is a small value (tool started, then exited)
 
 
-
 # --------------------- Analyze: Variability -----------------------------------
 
 # check variability between different runs along the same snippet per each tool
@@ -132,7 +135,7 @@ View(filter(status, Distinct > 1))
 # Assign the most frequent status to account for runs with different outcomes
 #  C should only be assigned if more than half of the runs resulted in C
 #  however as there were 10 runs, there can be ties
-# FIXME: abuses that different outcomes only contain C and NC
+# FIXME abuses that different outcomes only contain C and NC
 #         rev() is used to reverse C,NC to NC,C and then which.max select NC when there is a tie
 status$Status <- apply(status[,3:12], 1, function(x) names(which.max(rev(table(x)))))
 status$Status <- factor(status$Status, levels = STATUSES)
@@ -152,7 +155,6 @@ View(filter(status, Tool == "CATG", Status == "N/A"))
 View(filter(status, Tool == "EvoSuite", Distinct == 1, Status == "NC"))
 
 
-
 # ------------------------ Analyze: Status Table and Visualization---------------
 
 # calculate snippet numbers in categories
@@ -166,21 +168,20 @@ statusByCategory <- status %>% group_by(Tool, TopCategory, MainCategory, Status)
 statusByCategory <- inner_join(statusByCategory, snippet_numbers, by = "MainCategory")
 statusByCategory$Ratio <- statusByCategory$number / statusByCategory$totalNumber
 
-#TODO add further old image tweakings 
 # create stacked bar chart
-statusByCategory %>% ggplot(data=.) + 
+ggplot(data=statusByCategory) + 
   geom_bar(aes(x = MainCategory, y = Ratio, fill = Status), stat = "identity") +
   facet_grid(Tool ~ TopCategory, scales = "free_x", space = "free_x") +
-  scale_fill_brewer(palette = "RdYlGn", name = "Legend" ) +
-  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank())
+  scale_fill_manual(values=c("#d7191c", "#fdae61", "#ffff80", "#a6d96a", "#1a9641"), name = "Legend") + 
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.title = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 # create latex input for detailed status table
 statusTable <- data.frame(Tool=statusByCategory$Tool, MainCategory=statusByCategory$MainCategory, Status=statusByCategory$Status, Number=statusByCategory$number)
 statusTable <- spread(statusTable, MainCategory, Number)
 apply( statusTable, 1, paste, collapse=" & " )
 
-
 rm(statusByCategory, statusTable, snippet_numbers)
+
 
 # ------------------------- Analyze: Coverage ----------------------------------
 
@@ -194,7 +195,6 @@ manual_cov_cat <- manual %>% group_by(MainCategory) %>% summarise(MeanCoverage =
 
 # the mean in the boxplot should be compared to the red dot, as the manual is also a mean value
 qplot(data=mean_cov_cat, MainCategory, MeanCoverage, geom="boxplot") + geom_point(data=manual_cov_cat ,aes(y=MeanCoverage), color="red") + theme_bw() + xlab("Snippet categories") + ylab("Mean coverage [%]")
-
 
 # plot mean coverage per tool
 # this is with N/A, EX, T/M counted as 0%
@@ -223,6 +223,9 @@ rm(mean_cov, mean_cov_cat, cov, manual_cov_cat)
 # see variability of duration data, i.e. what is lost with using mean of 10 runs
 mean_dur <- filter(r_nc_c, ! is.na(Duration)) %>% group_by(Snippet, Tool) %>% summarise(D=mean(Duration), sd=sd(Duration))
 
+# descriptive statistics for duration by tool
+mean_dur %>% group_by(Tool) %>% summarise(min(D), mean(D), median(D), max(D), sd(D))
+
 # histogram of durations per tool
 mean_dur %>% ggplot(., aes(x=D)) + geom_histogram() + facet_wrap(~Tool) +
     geom_vline(xintercept = 30, linetype = "dashed") +
@@ -243,6 +246,7 @@ qplot(data=evo_dur, x=MainCategory, y=MeanDuration) +
 filter(mean_dur, Tool == "Randoop", D >= 30)
 
 rm(mean_dur, evo_dur)
+
 
 #--------------------------- Analyze: Size --------------------------------
 
@@ -269,12 +273,33 @@ randoop_d_s <- filter(r, Tool == "Randoop") %>% group_by(Snippet, TopCategory) %
 ggplot(data = randoop_d_s, aes(x = d, y = s, color = TopCategory)) + geom_point(size = 1.5) + 
   theme_bw() + xlab("Duration [s]") + ylab("Size") + scale_color_discrete(name="Category")
 
-rm(r_c, s_diff, mean_size, randoop_d_s)
+# --- test length (lines, bytes)
+
+l <- read.csv("data/sette-snippets-core_evosuite_intellitest_randoop_test_length.csv")
+l$Tool <- factor(l$Tool, levels = TOOLS)
+lr <- inner_join(filter(r, Tool == "EvoSuite" | Tool == "IntelliTest" | Tool == "Randoop" ),
+                 l, by = c("Snippet", "Tool", "Run"))
+# work only with snippets resulted in C
+lrc <- lr %>% filter(Status == "C") %>% select(TopCategory, Snippet, Tool, Run, Size, AvgLineCount, AvgBytes)
+
+mean_length <- lrc %>% group_by(TopCategory, Snippet, Tool) %>% summarise(L=mean(AvgLineCount), l_sd=sd(AvgLineCount), B=mean(AvgBytes), B_sd=sd(AvgBytes))
+
+# descriptive statistics
+mean_length %>% filter(! is.na(L)) %>% group_by(Tool) %>% summarize(min(L), mean(L), median(L), max(L), sd(L), sum(L))
+mean_length %>% filter(! is.na(B)) %>% group_by(Tool) %>% summarize(min(B), mean(B), median(B), max(B), sd(B), sum(B))
+
+qplot(data=mean_length, x=Tool, y=L, geom="boxplot", color=TopCategory, ylim = c(0,50))
+qplot(data=mean_length, x=Tool, y=B, geom="boxplot", color=TopCategory, ylim = c(0, 1000))
+
+l_wide_l <- mean_length %>% select(Snippet, Tool, L) %>% spread(Tool, L)
+l_wide_b <- mean_length %>% select(Snippet, Tool, B) %>% spread(Tool, B)
+
+rm(r_c, s_diff, mean_size, randoop_d_s, l, lr, lrc, l_wide_b, l_wide_l, mean_length)
 
 
 #--------------------------- Analyze: Performance/time --------------------------------
 
-p <- read.csv("data/performance-time.csv")
+p <- read.csv("data/sette-snippets-performance-time_run1-10.csv")
 p$Duration <- p$Duration / 1000.0
 p$MainCategory <- factor(substr(p$Category, 1, 2))
 
@@ -321,6 +346,7 @@ apply( spread(p_cov, TimeLimit, Coverage), 1, paste, collapse=" & " )
 p_size$Size <- round(p_size$Size, digits = 2)
 apply( spread(p_size, TimeLimit, Size), 1, paste, collapse=" & " )
 apply( spread(p_c_status, TimeLimit, C), 1, paste, collapse=" & " )
+# see p_c_status, p_cov, p_size
 
 p1 <- p_status %>% select(Tool, Snippet, TimeLimit, Status)
 p2 <- p %>% select(Tool, Snippet, TimeLimit, Duration, Run) %>% group_by(Tool, Snippet, TimeLimit) %>% summarise(d=mean(Duration))
@@ -332,25 +358,42 @@ p_dur <- inner_join(p1, p2)
 p_dur %>% filter(TimeLimit == "300") %>%
   qplot(data=., x=d, geom="histogram", fill=Status) + facet_wrap(~Tool) +
   geom_vline(xintercept = 30, linetype = "dashed") +
+  scale_fill_manual(values=c("#d7191c", "#fdae61", "#ffff80", "#a6d96a", "#1a9641")) +
   theme_bw() + xlab("Duration of test generation [s]") + ylab("Number of snippets")
 
 # --- tool-specific analysis
 
-# EvoSuite: search for snippet that changed status
+# search for snippets that changed status
 evo_p_s <- filter(p_status, Tool=="EvoSuite") %>% select(Tool, Snippet, TimeLimit, Status) %>% spread(TimeLimit, Status)
 View(evo_p_s[evo_p_s$`15` != evo_p_s$`300`,])
 
-rm(evo_p_s, p_dur, status_by_time, status_by_time_wide, p_status, p1, p2, p, p_cov, p_size, p_c_status)
+randoop_p_s <- filter(p_status, Tool=="Randoop") %>% select(Tool, Snippet, TimeLimit, Status) %>% spread(TimeLimit, Status)
+View(randoop_p_s[randoop_p_s$`30` != randoop_p_s$`45`,])
+
+rm(randoop_p_s, evo_p_s, p_dur, status_by_time, status_by_time_wide, p_status, p1, p2, p, p_cov, p_size, p_c_status)
 
 
 # -------------------------------- Extra snippets -------------------
 
-extra <- read.csv("data/snippets-extra-catg-evosuite-jpet-randoop-spf.csv")
+extra <- read.csv("data/sette-snippets-extra-catg-evosuite-jpet-randoop-spf_run1-10_30sec.csv")
 extra$Status <- factor(extra$Status, levels = STATUSES)
 extra$Tool <- factor(extra$Tool, levels = TOOLS)
+extra$MainCategory <- factor(substr(extra$Category, 1, 1))
 
-status_extra <- extra %>% select(Tool, Snippet, Run, Status) %>% spread(Run, Status)
+# variability of results
+for (t in TOOLS) {
+  v_status <- (extra %>% filter(Tool == t) %>% group_by(Snippet) %>% summarise(distinct = n_distinct(Status)) %>% filter(distinct > 1) %>% count())[[1]]
+  v_size   <- (extra %>% filter(Tool == t) %>% group_by(Snippet) %>% summarise(distinct = n_distinct(Size)) %>% filter(distinct > 1) %>% count())[[1]]
+  v_cov    <- (extra %>% filter(Tool == t) %>% group_by(Snippet) %>% summarise(mean(Coverage), sd = sd(Coverage)) %>% filter(sd > 0) %>% count())[[1]]
+  
+  print(paste("Variability / Nr. of different Status /", t, ":", v_status)) 
+  print(paste("Variability / Nr. of different Size   /", t, ":", v_size)) 
+  print(paste("Variability / Nr. of sd(Coverage) > 0 /", t, ":", v_cov)) 
+}
+rm(t, v_status, v_size, v_cov)
+
+# status computation
+status_extra <- extra %>% select(Tool, MainCategory, Snippet, Run, Status) %>% spread(Run, Status)
 status_extra$Status <- apply(status_extra[,3:12], 1, function(x) names(which.max(rev(table(x)))))
 status_extra$Status <- factor(status_extra$Status, levels = STATUSES)
-status_extra %>% group_by(Tool, Status) %>% summarise(n=n())
-
+status_extra %>% group_by(Tool, MainCategory, Status) %>% summarise(n=n())
